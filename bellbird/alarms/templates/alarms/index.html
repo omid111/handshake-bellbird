@@ -1,0 +1,124 @@
+<html>
+    <head>
+				<meta charset="UTF-8">
+
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+				<title>BellBird Alarms</title>
+    </head>
+    <body>
+        <h1>BellBird Alarms</h1>
+        <h3>Enter your alarm, ALL CAPS.</h3>
+				<div id="content">
+
+          <form action="{% url 'alarm' %}" method="POST">
+              {% csrf_token %}
+              {{ alarm_form.text }}
+              <button class="btn btn-success" type="button">Submit</button>
+          </form>
+
+          {% verbatim %}
+          <table class="table">
+            <thead class="thead-light">
+              <th>
+                  Time Ago
+              </th>
+              <th>
+                  Alarm
+              </th>
+              <th>
+                  Upvote
+              </th>
+            </thead>
+            <tr v-for="alarm in alarms">
+              <th>
+                  {{ getTimeAgo(alarm.fields.created_at) }}
+              </th>
+              <th>
+                  {{ alarm.fields.text }}
+              </th>
+              <th>
+                  <button class="btn btn-warning" @click="upvote(alarm.pk)">{{ alarm.fields.votes }} <i class="fa fa-chevron-up" aria-hidden="true"></i></button>
+              </th>
+            </tr>
+          </table>
+          {% endverbatim %}
+          <a href="{% url 'alarms_list' %}"><button class="btn btn-lg">View All Alarms</button></a>
+        </div>
+
+        <!-- load external scripts -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" type="text/javascript"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" type="text/javascript"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js" type="text/javascript"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.6.1/jquery.timeago.min.js" type="text/javascript"></script>
+        <script type="text/javascript">
+            function csrfSafeMethod(method) {
+              // these HTTP methods do not require CSRF protection
+              return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+            $.ajaxSetup({
+              beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                }
+              }
+            });
+
+            var alarmVue = new Vue({
+              el: '#content',
+
+              data: {
+                  alarms: []
+              },
+
+              created: function() {
+                  this.fetchAlarms()
+                  var that = this;
+                  setInterval(function() {
+                      that.fetchAlarms();
+                  }, 5000);
+              },
+
+              methods: {
+                  fetchAlarms: function() {
+                      var that = this;
+                      $.get("{% url 'recent_alarms' %}", function(alarms) {
+                          that.alarms = JSON.parse(alarms);
+                      });
+                  },
+
+                  getTimeAgo: function(timestamp) {
+                      return jQuery.timeago(new Date(timestamp));
+                  },
+
+                  addAlarm: function(event) {
+                      event.preventDefault();
+                      var that = this;
+                      $.ajax({
+                        type     : 'POST',
+                        url      : '{% url "alarm_upvote" pk=99999 %}'.replace('99999', alarm_id),
+                      }).done(function(result) {
+                          that.fetchAlarms();
+                      }).fail(function(error) {
+                          console.log(error);
+                      });
+                  },
+
+                  upvote: function(alarm_id) {
+                      var that = this;
+                      $.ajax({
+                        type     : 'POST',
+                        url      : '{% url "alarm_upvote" pk=99999 %}'.replace('99999', alarm_id),
+                      }).done(function(result) {
+                          that.fetchAlarms();
+                      }).fail(function(error) {
+                          console.log(error);
+                      });
+                  },
+              },
+            });
+        </script>
+    </body>
+</html>
